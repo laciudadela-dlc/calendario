@@ -7,7 +7,7 @@
 
 const CIUDADELA_CONFIG = {
   // Tu API Key de Google Calendar (pegala acá)
-  GOOGLE_API_KEY: "PEGA_TU_API_KEY_AQUI",
+  GOOGLE_API_KEY: "AIzaSyBwfyo4-Z9dDRSbaGwC6TitkAjhTUjmUT4",
 
   // ID del calendario (no cambiar)
   CALENDAR_ID: "laciudadeladelosconfines@gmail.com",
