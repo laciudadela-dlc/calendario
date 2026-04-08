@@ -775,6 +775,7 @@ body{font-family:'Nunito',system-ui,sans-serif;color:var(--ink);}
 .mesa-row-perio.p-mensual    { background: #5a1a1a; }
 .mesa-row-perio.p-one-shot   { background: #5a4a0a; }
 .mesa-row-perio.p-evento     { background: #3a0a5a; }
+.mesa-row-perio.p-taller     { background: #0a3a4a; }
 
 @media (max-width: 767px) {
   .mesa-row { flex-wrap: wrap; gap: 4px; }
@@ -1273,6 +1274,7 @@ function renderMesas(evs) {
     if(k.includes('mensual'))   return 'p-mensual';
     if(k.includes('one') || k.includes('shot')) return 'p-one-shot';
     if(k.includes('evento'))    return 'p-evento';
+    if(k.includes('taller'))    return 'p-taller';
     return '';
   };
 
@@ -1311,8 +1313,9 @@ function renderMesas(evs) {
       <span class="mesas-header-sub">${MES_ACTUAL} · ${totalMesas} mesa${totalMesas!==1?'s':''}</span>
     </div>
     <div class="mesas-subtabs">
-      <button class="mesas-subtab${mesasSubView==='sistema'?' active':''}" data-sub="sistema">Por sistema</button>
-      <button class="mesas-subtab${mesasSubView==='dm'?' active':''}" data-sub="dm">Por director</button>
+      <button class="mesas-subtab${mesasSubView==='sistema'?' active':''}" data-sub="sistema">Por tipo de juego</button>
+      <button class="mesas-subtab${mesasSubView==='dm'?' active':''}" data-sub="dm">Por DM</button>
+      <button class="mesas-subtab${mesasSubView==='modalidad'?' active':''}" data-sub="modalidad">Por modalidad</button>
     </div>`;
 
   const makeMesaRow = (ev, showSys=false) => {
@@ -1378,6 +1381,49 @@ function renderMesas(evs) {
       html += `<div class="mesas-group-header">
         <div class="mesas-group-dot" style="background:${isUnknown?'#444':'var(--gold2)'}"></div>
         <span class="mesas-group-name">${displayName}</span>
+        <span class="mesas-group-count">${group.length} mesa${group.length!==1?'s':''}</span>
+      </div>`;
+      group.forEach(ev => { html += makeMesaRow(ev, true); });
+    });
+
+  } else {
+    // Group by modalidad/periodicidad
+    const MODAL_ORDER = [
+      {key:'semanal',   label:'Semanal',    color:'#1a4a1a'},
+      {key:'quincenal', label:'Quincenal',   color:'#1a2a5a'},
+      {key:'mensual',   label:'Mensual',     color:'#5a1a1a'},
+      {key:'one-shot',  label:'One-Shot',    color:'#5a4a0a'},
+      {key:'evento',    label:'Evento',      color:'#3a0a5a'},
+      {key:'taller',    label:'Taller',      color:'#0a3a4a'},
+      {key:'',          label:'A confirmar', color:'#444'},
+    ];
+
+    const modalMap = new Map();
+    MODAL_ORDER.forEach(m => modalMap.set(m.key, []));
+
+    [...mesaMap.values()].forEach(ev => {
+      const p = (ev.periodicidad||'').toLowerCase().trim();
+      let matched = '';
+      if(p.includes('semanal'))              matched = 'semanal';
+      else if(p.includes('quincenal'))       matched = 'quincenal';
+      else if(p.includes('mensual'))         matched = 'mensual';
+      else if(p.includes('one')||p.includes('shot')) matched = 'one-shot';
+      else if(p.includes('evento'))          matched = 'evento';
+      else if(p.includes('taller'))          matched = 'taller';
+      // fallback: auto-detect from frequency
+      else if(ev.fechas.length >= 4)         matched = 'semanal';
+      else if(ev.fechas.length === 2)        matched = 'quincenal';
+      else if(ev.fechas.length === 1)        matched = 'one-shot';
+      if(modalMap.has(matched)) modalMap.get(matched).push(ev);
+      else modalMap.get('').push(ev);
+    });
+
+    MODAL_ORDER.forEach(m => {
+      const group = sortMesas(modalMap.get(m.key)||[]);
+      if(group.length === 0) return;
+      html += `<div class="mesas-group-header">
+        <div class="mesas-group-dot" style="background:${m.color}"></div>
+        <span class="mesas-group-name">${m.label}</span>
         <span class="mesas-group-count">${group.length} mesa${group.length!==1?'s':''}</span>
       </div>`;
       group.forEach(ev => { html += makeMesaRow(ev, true); });
