@@ -685,6 +685,104 @@ body{font-family:'Nunito',system-ui,sans-serif;color:var(--ink);}
   .mobile-filter-bar { display: flex; }
 }
 
+
+/* ── MESAS VIEW ──────────────────────────────────────── */
+.mesas-wrap { padding: 0; }
+
+.mesas-header {
+  background: var(--ink);
+  color: #fff;
+  padding: 10px 16px;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  border-bottom: 2px solid var(--gold2);
+}
+.mesas-header-title {
+  font-family: 'Cinzel', serif;
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--gold2);
+}
+.mesas-header-sub {
+  font-family: 'Nunito', sans-serif;
+  font-size: 12px;
+  color: #aaa;
+}
+
+.mesa-row {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 11px 16px;
+  border-bottom: 1px solid var(--brd);
+  cursor: pointer;
+  transition: background .12s;
+}
+.mesa-row:hover { background: var(--bg2); }
+
+.mesa-row-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-right: 10px;
+}
+.mesa-row-name {
+  font-family: 'Cinzel', serif;
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--ink);
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mesa-row-sys {
+  font-family: 'Nunito', sans-serif;
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+  margin-right: 12px;
+  flex-shrink: 0;
+}
+.mesa-row-schedule {
+  font-family: 'Nunito', sans-serif;
+  font-size: 11px;
+  color: var(--ink2);
+  white-space: nowrap;
+  flex-shrink: 0;
+  text-align: right;
+}
+.mesa-row-perio {
+  font-family: 'Cinzel', serif;
+  font-size: 8px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: #fff;
+  background: var(--muted);
+  padding: 2px 7px;
+  border-radius: 2px;
+  margin-left: 10px;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.mesa-row-perio.p-semanal    { background: #1a4a1a; }
+.mesa-row-perio.p-quincenal  { background: #1a2a5a; }
+.mesa-row-perio.p-mensual    { background: #5a1a1a; }
+.mesa-row-perio.p-one-shot   { background: #5a4a0a; }
+.mesa-row-perio.p-evento     { background: #3a0a5a; }
+
+@media (max-width: 767px) {
+  .mesa-row { flex-wrap: wrap; gap: 4px; }
+  .mesa-row-name { font-size: 12px; width: 100%; white-space: normal; flex: none; }
+  .mesa-row-sys { font-size: 10px; }
+  .mesa-row-schedule { font-size: 10px; }
+}
+
 </style>
 </head>
 <body>
@@ -707,6 +805,7 @@ body{font-family:'Nunito',system-ui,sans-serif;color:var(--ink);}
     <button class="view-tab active" data-view="week">Esta semana</button>
     <button class="view-tab" data-view="2week">2 semanas</button>
     <button class="view-tab" data-view="month">Mes</button>
+    <button class="view-tab" data-view="mesas">Mesas</button>
   </div>
 </header>
 <!-- Mobile filter bar -->
@@ -949,6 +1048,10 @@ function getDateRange(){
 }
 
 function updatePeriodLabel(){
+  if(viewMode==='mesas'){
+    document.getElementById('periodLabel').textContent=MES[now.getMonth()]+' '+now.getFullYear();
+    return;
+  }
   const {start,end}=getDateRange();
   const s=DS_SHORT[start.getDay()]+' '+start.getDate()+' '+MES[start.getMonth()];
   const e=DS_SHORT[end.getDay()]+' '+end.getDate()+' '+MES[end.getMonth()];
@@ -1070,6 +1173,94 @@ function renderAgenda(evs){
   });
 }
 
+
+// ── RENDER MESAS VIEW ─────────────────────────────────
+const DAYS_SHORT_ES = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+
+function renderMesas(evs) {
+  const body = document.getElementById('agendaContent');
+  const now2 = new Date();
+  // Take current full month
+  const monthStart = new Date(now2.getFullYear(), now2.getMonth(), 1);
+  const monthEnd   = new Date(now2.getFullYear(), now2.getMonth()+1, 0, 23, 59, 59);
+
+  const monthEvs = evs.filter(e => e.date >= monthStart && e.date <= monthEnd);
+
+  // Deduplicate by title — keep first occurrence, collect all days
+  const mesaMap = new Map();
+  monthEvs.forEach(ev => {
+    const key = ev.title.trim().toLowerCase();
+    if(!mesaMap.has(key)) {
+      mesaMap.set(key, {
+        ...ev,
+        days: new Set([ev.date.getDay()]),
+        horario: ft(ev.h, ev.mn),
+      });
+    } else {
+      mesaMap.get(key).days.add(ev.date.getDay());
+    }
+  });
+
+  const mesas = [...mesaMap.values()].sort((a,b) => {
+    // Sort by day of week first, then by time
+    const da = Math.min(...a.days);
+    const db = Math.min(...b.days);
+    if(da !== db) return da - db;
+    return (a.h*60+a.mn) - (b.h*60+b.mn);
+  });
+
+  if(mesas.length === 0) {
+    body.innerHTML = '<div class="agenda-empty">✦ No hay mesas programadas para este mes ✦</div>';
+    return;
+  }
+
+  const perioCls = (p) => {
+    if(!p) return '';
+    const k = p.toLowerCase();
+    if(k.includes('semanal'))   return 'p-semanal';
+    if(k.includes('quincenal')) return 'p-quincenal';
+    if(k.includes('mensual'))   return 'p-mensual';
+    if(k.includes('one') || k.includes('shot')) return 'p-one-shot';
+    if(k.includes('evento'))    return 'p-evento';
+    return '';
+  };
+
+  const MES_ACTUAL = MES[now2.getMonth()] + ' ' + now2.getFullYear();
+
+  let html = `<div class="mesas-wrap">
+    <div class="mesas-header">
+      <span class="mesas-header-title">✦ Menú de mesas</span>
+      <span class="mesas-header-sub">${MES_ACTUAL} · ${mesas.length} mesa${mesas.length!==1?'s':''}</span>
+    </div>`;
+
+  mesas.forEach(ev => {
+    const dot   = SYS_DOT[ev.sys] || '#555';
+    const sysLbl = SYS_LABELS[ev.sys] || 'Otro';
+    const daysStr = [...ev.days]
+      .sort((a,b)=>a-b)
+      .map(d => DAYS_SHORT_ES[d])
+      .join(' / ');
+    const perioBadge = ev.periodicidad
+      ? `<span class="mesa-row-perio ${perioCls(ev.periodicidad)}">${ev.periodicidad}</span>`
+      : '';
+
+    html += `<div class="mesa-row" data-id="${ev.id}">
+      <div class="mesa-row-dot" style="background:${dot}"></div>
+      <span class="mesa-row-name">${ev.title}</span>
+      <span class="mesa-row-sys">${sysLbl}</span>
+      <span class="mesa-row-schedule">${daysStr} · ${ev.horario}hs</span>
+      ${perioBadge}
+    </div>`;
+  });
+
+  html += '</div>';
+  body.innerHTML = html;
+
+  document.querySelectorAll('.mesa-row').forEach(el => {
+    el.addEventListener('click', () => openModal(el.dataset.id));
+  });
+}
+
 // ── LOAD ──────────────────────────────────────────────
 async function loadAndRender(){
   updatePeriodLabel();
@@ -1089,9 +1280,13 @@ async function loadAndRender(){
     });
     const results=await Promise.all(fetches);
     allLoadedEvents=results.flat();
-    const counts=countsBySys(allLoadedEvents.filter(e=>{const {start,end}=getDateRange();return e.date>=start&&e.date<=end;}));
-    buildAllFilterUI(counts);
-    renderAgenda(allLoadedEvents);
+    if(viewMode==='mesas'){
+      renderMesas(allLoadedEvents);
+    } else {
+      const counts=countsBySys(allLoadedEvents.filter(e=>{const {start,end}=getDateRange();return e.date>=start&&e.date<=end;}));
+      buildAllFilterUI(counts);
+      renderAgenda(allLoadedEvents);
+    }
   } catch(err){
     document.getElementById('agendaBody').innerHTML='<div class="agenda-loading">⚔ No se pudo conectar con el calendario.<br><small>'+err.message+'</small></div>';
   }
@@ -1118,8 +1313,21 @@ document.querySelectorAll('.view-tab').forEach(btn=>{
   btn.addEventListener('click',()=>{
     viewMode=btn.dataset.view;
     document.querySelectorAll('.view-tab').forEach(t=>t.classList.toggle('active',t===btn));
-    anchorDate=new Date(now);
-    loadAndRender();
+    if(viewMode==='mesas'){
+      // Mesas view: fetch full current month and render
+      document.getElementById('agendaContent').innerHTML='<div class="agenda-loading">Convocando a los dados... ✦</div>';
+      updatePeriodLabel();
+      const y=now.getFullYear(), m=now.getMonth();
+      fetchEvents(y,m).then(evs=>{
+        allLoadedEvents=evs;
+        renderMesas(evs);
+      }).catch(err=>{
+        document.getElementById('agendaContent').innerHTML='<div class="agenda-loading">⚔ Error: '+err.message+'</div>';
+      });
+    } else {
+      anchorDate=new Date(now);
+      loadAndRender();
+    }
   });
 });
 
