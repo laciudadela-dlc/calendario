@@ -814,6 +814,31 @@ body{font-family:'Nunito',system-ui,sans-serif;color:var(--ink);}
   color: #666;
 }
 
+
+.mesas-subtabs {
+  display: flex;
+  gap: 0;
+  padding: 10px 16px;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--brd);
+}
+.mesas-subtab {
+  font-family: 'Cinzel', serif;
+  font-size: 9px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  padding: 6px 14px;
+  border: 1px solid var(--brd-dark);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all .15s;
+}
+.mesas-subtab:first-child { border-radius: 2px 0 0 2px; }
+.mesas-subtab:last-child  { border-radius: 0 2px 2px 0; border-left: none; }
+.mesas-subtab.active { background: var(--ink); color: var(--gold2); border-color: var(--ink); }
+.mesas-subtab:hover:not(.active) { background: var(--bg3); }
+
 </style>
 </head>
 <body>
@@ -1284,9 +1309,13 @@ function renderMesas(evs) {
     <div class="mesas-header">
       <span class="mesas-header-title">✦ Menú de mesas</span>
       <span class="mesas-header-sub">${MES_ACTUAL} · ${totalMesas} mesa${totalMesas!==1?'s':''}</span>
+    </div>
+    <div class="mesas-subtabs">
+      <button class="mesas-subtab${mesasSubView==='sistema'?' active':''}" data-sub="sistema">Por sistema</button>
+      <button class="mesas-subtab${mesasSubView==='dm'?' active':''}" data-sub="dm">Por director</button>
     </div>`;
 
-  const makeMesaRow = (ev) => {
+  const makeMesaRow = (ev, showSys=false) => {
     const dot    = SYS_DOT[ev.sys] || '#555';
     const dayName = DAYS_SHORT_ES[ev.date.getDay()];
     let scheduleStr;
@@ -1301,26 +1330,59 @@ function renderMesas(evs) {
     else if(!perio && ev.fechas.length === 2) perio = 'Quincenal';
     else if(!perio && ev.fechas.length === 1) perio = 'One-Shot';
     const perioBadge = perio ? `<span class="mesa-row-perio ${perioCls(perio)}">${perio}</span>` : '';
+    const sysBadge = showSys
+      ? `<span class="mesa-row-sys" style="font-size:10px;color:var(--muted);margin-right:8px;">${SYS_LABELS[ev.sys]||'Otro'}</span>`
+      : '';
     return `<div class="mesa-row" data-id="${ev.id}">
       <div class="mesa-row-dot" style="background:${dot}"></div>
       <span class="mesa-row-name">${ev.title}</span>
+      ${sysBadge}
       <span class="mesa-row-schedule">${scheduleStr}</span>
       ${perioBadge}
     </div>`;
   };
 
-  SYS_ORDER.forEach(sysId => {
-    const group = sortMesas(groups[sysId]);
-    if(group.length === 0) return;
-    const dot  = SYS_DOT[sysId] || '#555';
-    const name = SYS_LABELS[sysId] || 'Otro';
-    html += `<div class="mesas-group-header">
-      <div class="mesas-group-dot" style="background:${dot}"></div>
-      <span class="mesas-group-name">${name}</span>
-      <span class="mesas-group-count">${group.length} mesa${group.length!==1?'s':''}</span>
-    </div>`;
-    group.forEach(ev => { html += makeMesaRow(ev); });
-  });
+  if(mesasSubView === 'sistema') {
+    SYS_ORDER.forEach(sysId => {
+      const group = sortMesas(groups[sysId]);
+      if(group.length === 0) return;
+      const dot  = SYS_DOT[sysId] || '#555';
+      const name = SYS_LABELS[sysId] || 'Otro';
+      html += `<div class="mesas-group-header">
+        <div class="mesas-group-dot" style="background:${dot}"></div>
+        <span class="mesas-group-name">${name}</span>
+        <span class="mesas-group-count">${group.length} mesa${group.length!==1?'s':''}</span>
+      </div>`;
+      group.forEach(ev => { html += makeMesaRow(ev, false); });
+    });
+  } else {
+    // Group by DM
+    const dmMap = new Map();
+    [...mesaMap.values()].forEach(ev => {
+      const dmKey = ev.dm ? ev.dm.trim() : '';
+      if(!dmMap.has(dmKey)) dmMap.set(dmKey, []);
+      dmMap.get(dmKey).push(ev);
+    });
+
+    // Sort DM names alphabetically, empty last
+    const dmKeys = [...dmMap.keys()].sort((a,b) => {
+      if(!a && b)  return 1;
+      if(a && !b)  return -1;
+      return a.localeCompare(b, 'es');
+    });
+
+    dmKeys.forEach(dmKey => {
+      const group = sortMesas(dmMap.get(dmKey));
+      const displayName = dmKey || 'Director a confirmar';
+      const isUnknown = !dmKey;
+      html += `<div class="mesas-group-header">
+        <div class="mesas-group-dot" style="background:${isUnknown?'#444':'var(--gold2)'}"></div>
+        <span class="mesas-group-name">${displayName}</span>
+        <span class="mesas-group-count">${group.length} mesa${group.length!==1?'s':''}</span>
+      </div>`;
+      group.forEach(ev => { html += makeMesaRow(ev, true); });
+    });
+  }
 
   html += '</div>';
   body.innerHTML = html;
@@ -1416,6 +1478,7 @@ const SYSTEMS = [
 const DAYS_LABELS = ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
 const DAYS_JS     = [1,2,3,4,5,6,0]; // JS getDay() values
 
+let mesasSubView = 'sistema'; // 'sistema' | 'dm'
 let activeSys  = new Set();
 let activeDays = new Set();
 
@@ -1468,6 +1531,15 @@ function buildDayUI(containerId) {
 
 
 // ── STATIC EVENT DELEGATION (attached once, never removed) ───────────────────
+// Mesas subtabs
+document.addEventListener('click', function(e) {
+  const subtab = e.target.closest('.mesas-subtab');
+  if(subtab) {
+    mesasSubView = subtab.dataset.sub;
+    renderMesas(allLoadedEvents);
+    return;
+  }
+});
 // Sidebar sys
 document.addEventListener('click', function(e) {
   // Sidebar sys filter
