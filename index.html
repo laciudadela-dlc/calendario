@@ -1177,35 +1177,44 @@ function renderAgenda(evs){
 // ── RENDER MESAS VIEW ─────────────────────────────────
 const DAYS_SHORT_ES = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
 
+function normKey(title) {
+  // Normalize title for dedup: lowercase, remove accents, collapse spaces, strip punctuation
+  return title.trim().toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/[^a-z0-9\s]/g,' ')
+    .replace(/\s+/g,' ').trim();
+}
+
 function renderMesas(evs) {
   const body = document.getElementById('agendaContent');
   const now2 = new Date();
-  // Take current full month
   const monthStart = new Date(now2.getFullYear(), now2.getMonth(), 1);
   const monthEnd   = new Date(now2.getFullYear(), now2.getMonth()+1, 0, 23, 59, 59);
 
   const monthEvs = evs.filter(e => e.date >= monthStart && e.date <= monthEnd);
 
-  // Deduplicate by title — keep first occurrence, collect all days
+  // Deduplicate by normalized title + same weekday + same hour
+  // Key: normalizedTitle + '_' + dayOfWeek + '_' + hour
   const mesaMap = new Map();
   monthEvs.forEach(ev => {
-    const key = ev.title.trim().toLowerCase();
+    const key = normKey(ev.title) + '_' + ev.date.getDay() + '_' + ev.h;
     if(!mesaMap.has(key)) {
       mesaMap.set(key, {
         ...ev,
-        days: new Set([ev.date.getDay()]),
+        fechas: [new Date(ev.date)],
         horario: ft(ev.h, ev.mn),
       });
     } else {
-      mesaMap.get(key).days.add(ev.date.getDay());
+      mesaMap.get(key).fechas.push(new Date(ev.date));
     }
   });
 
   const mesas = [...mesaMap.values()].sort((a,b) => {
-    // Sort by day of week first, then by time
-    const da = Math.min(...a.days);
-    const db = Math.min(...b.days);
-    if(da !== db) return da - db;
+    const da = a.date.getDay();
+    const db = b.date.getDay();
+    const da2 = da===0?7:da;
+    const db2 = db===0?7:db;
+    if(da2 !== db2) return da2 - db2;
     return (a.h*60+a.mn) - (b.h*60+b.mn);
   });
 
@@ -1234,21 +1243,34 @@ function renderMesas(evs) {
     </div>`;
 
   mesas.forEach(ev => {
-    const dot   = SYS_DOT[ev.sys] || '#555';
+    const dot    = SYS_DOT[ev.sys] || '#555';
     const sysLbl = SYS_LABELS[ev.sys] || 'Otro';
-    const daysStr = [...ev.days]
-      .sort((a,b)=>a-b)
-      .map(d => DAYS_SHORT_ES[d])
-      .join(' / ');
-    const perioBadge = ev.periodicidad
-      ? `<span class="mesa-row-perio ${perioCls(ev.periodicidad)}">${ev.periodicidad}</span>`
+    const dayName = DAYS_SHORT_ES[ev.date.getDay()];
+
+    // Show dates if more than one occurrence
+    let scheduleStr;
+    if(ev.fechas.length === 1) {
+      scheduleStr = dayName + ' ' + ev.fechas[0].getDate() + ' · ' + ev.horario + 'hs';
+    } else {
+      const dias = ev.fechas.map(f => f.getDate()).join(', ');
+      scheduleStr = dayName + 's ' + dias + ' · ' + ev.horario + 'hs';
+    }
+
+    // Auto-detect periodicidad if not set
+    let perio = ev.periodicidad;
+    if(!perio && ev.fechas.length >= 4) perio = 'Semanal';
+    else if(!perio && ev.fechas.length === 2) perio = 'Quincenal';
+    else if(!perio && ev.fechas.length === 1) perio = 'One-Shot';
+
+    const perioBadge = perio
+      ? `<span class="mesa-row-perio ${perioCls(perio)}">${perio}</span>`
       : '';
 
     html += `<div class="mesa-row" data-id="${ev.id}">
       <div class="mesa-row-dot" style="background:${dot}"></div>
       <span class="mesa-row-name">${ev.title}</span>
       <span class="mesa-row-sys">${sysLbl}</span>
-      <span class="mesa-row-schedule">${daysStr} · ${ev.horario}hs</span>
+      <span class="mesa-row-schedule">${scheduleStr}</span>
       ${perioBadge}
     </div>`;
   });
