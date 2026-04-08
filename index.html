@@ -783,6 +783,37 @@ body{font-family:'Nunito',system-ui,sans-serif;color:var(--ink);}
   .mesa-row-schedule { font-size: 10px; }
 }
 
+
+.mesas-group-header {
+  background: var(--ink);
+  color: #fff;
+  padding: 7px 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+.mesas-group-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%; flex-shrink: 0;
+}
+.mesas-group-name {
+  font-family: 'Cinzel', serif;
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--gold2);
+  flex: 1;
+}
+.mesas-group-count {
+  font-family: 'Cinzel', serif;
+  font-size: 9px;
+  color: #666;
+}
+
 </style>
 </head>
 <body>
@@ -1209,20 +1240,6 @@ function renderMesas(evs) {
     }
   });
 
-  const mesas = [...mesaMap.values()].sort((a,b) => {
-    const da = a.date.getDay();
-    const db = b.date.getDay();
-    const da2 = da===0?7:da;
-    const db2 = db===0?7:db;
-    if(da2 !== db2) return da2 - db2;
-    return (a.h*60+a.mn) - (b.h*60+b.mn);
-  });
-
-  if(mesas.length === 0) {
-    body.innerHTML = '<div class="agenda-empty">✦ No hay mesas programadas para este mes ✦</div>';
-    return;
-  }
-
   const perioCls = (p) => {
     if(!p) return '';
     const k = p.toLowerCase();
@@ -1234,20 +1251,44 @@ function renderMesas(evs) {
     return '';
   };
 
-  const MES_ACTUAL = MES[now2.getMonth()] + ' ' + now2.getFullYear();
+  // Sort within each group: by first date/time, then alphabetical
+  const sortMesas = (arr) => arr.sort((a,b) => {
+    const dayA = a.date.getDay()===0 ? 7 : a.date.getDay();
+    const dayB = b.date.getDay()===0 ? 7 : b.date.getDay();
+    if(dayA !== dayB) return dayA - dayB;
+    const timeA = a.h*60 + a.mn;
+    const timeB = b.h*60 + b.mn;
+    if(timeA !== timeB) return timeA - timeB;
+    return a.title.localeCompare(b.title, 'es');
+  });
 
+  // Group by system in the canonical order
+  const SYS_ORDER = ['dnd','d55','pf','vam','hw','mag','hun','oth'];
+  const groups = {};
+  SYS_ORDER.forEach(s => groups[s] = []);
+  [...mesaMap.values()].forEach(ev => {
+    const s = SYS_ORDER.includes(ev.sys) ? ev.sys : 'oth';
+    groups[s].push(ev);
+  });
+
+  // Count total unique mesas
+  const totalMesas = Object.values(groups).reduce((sum,g)=>sum+g.length,0);
+
+  if(totalMesas === 0) {
+    body.innerHTML = '<div class="agenda-empty">✦ No hay mesas programadas para este mes ✦</div>';
+    return;
+  }
+
+  const MES_ACTUAL = MES[now2.getMonth()] + ' ' + now2.getFullYear();
   let html = `<div class="mesas-wrap">
     <div class="mesas-header">
       <span class="mesas-header-title">✦ Menú de mesas</span>
-      <span class="mesas-header-sub">${MES_ACTUAL} · ${mesas.length} mesa${mesas.length!==1?'s':''}</span>
+      <span class="mesas-header-sub">${MES_ACTUAL} · ${totalMesas} mesa${totalMesas!==1?'s':''}</span>
     </div>`;
 
-  mesas.forEach(ev => {
+  const makeMesaRow = (ev) => {
     const dot    = SYS_DOT[ev.sys] || '#555';
-    const sysLbl = SYS_LABELS[ev.sys] || 'Otro';
     const dayName = DAYS_SHORT_ES[ev.date.getDay()];
-
-    // Show dates if more than one occurrence
     let scheduleStr;
     if(ev.fechas.length === 1) {
       scheduleStr = dayName + ' ' + ev.fechas[0].getDate() + ' · ' + ev.horario + 'hs';
@@ -1255,24 +1296,30 @@ function renderMesas(evs) {
       const dias = ev.fechas.map(f => f.getDate()).join(', ');
       scheduleStr = dayName + 's ' + dias + ' · ' + ev.horario + 'hs';
     }
-
-    // Auto-detect periodicidad if not set
     let perio = ev.periodicidad;
     if(!perio && ev.fechas.length >= 4) perio = 'Semanal';
     else if(!perio && ev.fechas.length === 2) perio = 'Quincenal';
     else if(!perio && ev.fechas.length === 1) perio = 'One-Shot';
-
-    const perioBadge = perio
-      ? `<span class="mesa-row-perio ${perioCls(perio)}">${perio}</span>`
-      : '';
-
-    html += `<div class="mesa-row" data-id="${ev.id}">
+    const perioBadge = perio ? `<span class="mesa-row-perio ${perioCls(perio)}">${perio}</span>` : '';
+    return `<div class="mesa-row" data-id="${ev.id}">
       <div class="mesa-row-dot" style="background:${dot}"></div>
       <span class="mesa-row-name">${ev.title}</span>
-      <span class="mesa-row-sys">${sysLbl}</span>
       <span class="mesa-row-schedule">${scheduleStr}</span>
       ${perioBadge}
     </div>`;
+  };
+
+  SYS_ORDER.forEach(sysId => {
+    const group = sortMesas(groups[sysId]);
+    if(group.length === 0) return;
+    const dot  = SYS_DOT[sysId] || '#555';
+    const name = SYS_LABELS[sysId] || 'Otro';
+    html += `<div class="mesas-group-header">
+      <div class="mesas-group-dot" style="background:${dot}"></div>
+      <span class="mesas-group-name">${name}</span>
+      <span class="mesas-group-count">${group.length} mesa${group.length!==1?'s':''}</span>
+    </div>`;
+    group.forEach(ev => { html += makeMesaRow(ev); });
   });
 
   html += '</div>';
