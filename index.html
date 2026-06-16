@@ -977,6 +977,27 @@ body{font-family:'Nunito',system-ui,sans-serif;color:var(--ink);}
 </div>
 
 <script src="config.js"></script>
+<!-- Firebase SDK (type=module para usar import/export) -->
+<script type="module">
+  import { initializeApp }   from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+  import { getFirestore, doc, getDoc, setDoc,
+           collection, getDocs, writeBatch }
+    from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+  const app = initializeApp(CIUDADELA_CONFIG.FIREBASE);
+  const db  = getFirestore(app);
+
+  window.FB = { db, doc, getDoc, setDoc, collection, getDocs, writeBatch };
+  // Resuelve la promesa que el código principal está esperando
+  if (window._fbResolve) window._fbResolve();
+</script>
+<script>
+  // Promesa que se resuelve cuando Firebase esté listo
+  // Se crea ANTES del module para garantizar que _fbResolve exista cuando el module la llame
+  window._fbReady = new Promise(resolve => { window._fbResolve = resolve; });
+  // Fallback: si Firebase no carga en 10s, resolver igual para no bloquear la app
+  setTimeout(() => { if(window._fbResolve) window._fbResolve(); }, 10000);
+</script>
 <script>
 const MES=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 const DS_SHORT=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
@@ -1054,32 +1075,148 @@ function sysFromTitle(t){
 }
 
 // ── CACHE + FETCH ─────────────────────────────────────
-const cache={};
-async function fetchEvents(year,month){
-  const key=year+'-'+month;
-  if(cache[key]) return cache[key];
-  const tMin=new Date(year,month,1).toISOString();
-  const tMax=new Date(year,month+1,0,23,59,59).toISOString();
-  const url='https://www.googleapis.com/calendar/v3/calendars/'
-    +encodeURIComponent(CIUDADELA_CONFIG.CALENDAR_ID)+'/events'
-    +'?key='+CIUDADELA_CONFIG.GOOGLE_API_KEY
-    +'&timeMin='+encodeURIComponent(tMin)
-    +'&timeMax='+encodeURIComponent(tMax)
-    +'&singleEvents=true&orderBy=startTime&maxResults=250';
-  const r=await fetch(url);
-  if(!r.ok) throw new Error('Error '+r.status);
-  const data=await r.json();
-  const evs=(data.items||[]).map(item=>{
-    const start=new Date(item.start.dateTime||item.start.date);
-    const end=new Date(item.end.dateTime||item.end.date);
-    const dur=Math.round((end-start)/60000);
-    const p=parseDesc(item.description||'');
-    const sd=resolveSys(p.sistema);
-    const sys=sd!=='oth'?sd:(sysFromTitle(item.summary)||'oth');
-    return {id:item.id,title:item.summary||'(Sin título)',date:start,h:start.getHours(),mn:start.getMinutes(),dur,sys,dm:p.dm,cupos:p.cupos,periodicidad:p.periodicidad,sinopsis:p.sinopsis};
+// ── FIREBASE SYNC ─────────────────────────────────────────────────────────────
+// Convierte un item crudo de Google Calendar al formato interno de la app
+function gcalItemToEvent(item) {
+  const start = new Date(item.start.dateTime || item.start.date);
+  const end   = new Date(item.end.dateTime   || item.end.date);
+  const dur   = Math.round((end - start) / 60000);
+  const p     = parseDesc(item.description || '');
+  const sd    = resolveSys(p.sistema);
+  const sys   = sd !== 'oth' ? sd : (sysFromTitle(item.summary) || 'oth');
+  return {
+    id          : item.id,
+    title       : item.summary || '(Sin título)',
+    dateISO     : start.toISOString(),
+    h           : start.getHours(),
+    mn          : start.getMinutes(),
+    dur,
+    sys,
+    dm          : p.dm,
+    cupos       : p.cupos,
+    periodicidad: p.periodicidad,
+    sinopsis    : p.sinopsis,
+    updatedRaw  : item.updated || ''
+  };
+}
+
+// Lee eventos de Firestore para un mes dado
+async function readFromFirestore(year, month) {
+  await window._fbReady;
+  const { collection, getDocs, db } = window.FB;
+  const colId = year + '-' + String(month + 1).padStart(2, '0');
+  const snap  = await getDocs(collection(db, 'eventos', colId, 'items'));
+  return snap.docs.map(d => {
+    const data = d.data();
+    return { ...data, date: new Date(data.dateISO) };
   });
-  cache[key]=evs;
-  return evs;
+}
+
+// Trae eventos de Google Calendar directamente
+async function fetchFromGCal(year, month, updatedMin) {
+  const tMin = new Date(year, month, 1).toISOString();
+  const tMax = new Date(year, month + 1, 0, 23, 59, 59).toISOString();
+  let url = 'https://www.googleapis.com/calendar/v3/calendars/'
+    + encodeURIComponent(CIUDADELA_CONFIG.CALENDAR_ID) + '/events'
+    + '?key=' + CIUDADELA_CONFIG.GOOGLE_API_KEY
+    + '&timeMin=' + encodeURIComponent(tMin)
+    + '&timeMax=' + encodeURIComponent(tMax)
+    + '&singleEvents=true&orderBy=startTime&maxResults=250'
+    + '&showDeleted=true';
+  if (updatedMin) url += '&updatedMin=' + encodeURIComponent(updatedMin);
+  const r = await fetch(url);
+  if (!r.ok) throw new Error('GCal error ' + r.status);
+  const data = await r.json();
+  return data.items || [];
+}
+
+// Guarda/actualiza eventos en Firestore usando batch
+async function syncToFirestore(year, month, gcalItems) {
+  await window._fbReady;
+  const { db, doc, writeBatch, setDoc } = window.FB;
+  const colId   = year + '-' + String(month + 1).padStart(2, '0');
+  const batch   = writeBatch(db);
+  let   changes = 0;
+  for (const item of gcalItems) {
+    const ref     = doc(db, 'eventos', colId, 'items', item.id);
+    const deleted = item.status === 'cancelled';
+    if (deleted) {
+      batch.delete(ref);
+    } else {
+      batch.set(ref, gcalItemToEvent(item), { merge: true });
+    }
+    changes++;
+  }
+  if (changes > 0) {
+    await batch.commit();
+    const metaRef = doc(db, 'meta', 'sync');
+    await setDoc(metaRef, { lastSync: new Date().toISOString() }, { merge: true });
+  }
+  return changes;
+}
+
+// Obtiene el timestamp de la última sync
+async function getLastSync() {
+  await window._fbReady;
+  const { db, doc, getDoc } = window.FB;
+  try {
+    const snap = await getDoc(doc(db, 'meta', 'sync'));
+    return snap.exists() ? snap.data().lastSync : null;
+  } catch(e) { return null; }
+}
+
+// ── FETCH PRINCIPAL ────────────────────────────────────────────────────────────
+// 1. Lee Firestore → renderiza inmediato
+// 2. Sync GCal en background → re-renderiza solo si hubo cambios
+const cache = {};
+let syncDone = false;
+
+async function fetchEvents(year, month) {
+  const key = year + '-' + month;
+
+  // Paso 1: leer desde Firestore
+  if (!cache[key]) {
+    try {
+      const stored = await readFromFirestore(year, month);
+      cache[key] = stored.length > 0 ? stored : null;
+    } catch(e) { cache[key] = null; }
+  }
+
+  // Paso 2: sync en background, una vez por sesión
+  if (!syncDone) {
+    syncDone = true;
+    _backgroundSync(year, month).catch(e => console.warn('Sync bgd:', e));
+  }
+
+  // Si Firestore está vacío, traer de GCal directamente y guardar
+  if (!cache[key]) {
+    const items = await fetchFromGCal(year, month, null);
+    const evs   = items
+      .filter(i => i.status !== 'cancelled')
+      .map(i => ({ ...gcalItemToEvent(i), date: new Date(gcalItemToEvent(i).dateISO) }));
+    await syncToFirestore(year, month, items);
+    cache[key] = evs;
+  }
+
+  return cache[key] || [];
+}
+
+// Sync en background: solo trae lo modificado desde la última sync
+async function _backgroundSync(year, month) {
+  const lastSync = await getLastSync();
+  const items    = await fetchFromGCal(year, month, lastSync);
+  if (items.length === 0) return;
+  const changes = await syncToFirestore(year, month, items);
+  if (changes > 0) {
+    delete cache[year + '-' + month];
+    const { start } = getDateRange();
+    if (start.getFullYear() === year && start.getMonth() === month) {
+      const fresh = await readFromFirestore(year, month);
+      cache[year + '-' + month] = fresh;
+      allLoadedEvents = fresh;
+      reRender();
+    }
+  }
 }
 
 // ── STATE ─────────────────────────────────────────────
