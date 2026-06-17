@@ -1932,7 +1932,7 @@ document.querySelectorAll('.view-tab').forEach(btn=>{
       document.getElementById('agendaContent').innerHTML='<div class="agenda-loading">Convocando a los dados... ✦</div>';
       updatePeriodLabel();
       const y=now.getFullYear(), m=now.getMonth();
-      fetchEvents(y,m).then(evs=>{
+      fetchEvents(y,m).then(async evs=>{
         allLoadedEvents=evs;
         await renderMesas(evs);
       }).catch(err=>{
@@ -2015,7 +2015,7 @@ function buildDayUI(containerId) {
 
 // ── STATIC EVENT DELEGATION (attached once, never removed) ───────────────────
 // Mesas subtabs
-document.addEventListener('click', function(e) {
+document.addEventListener('click', async function(e) {
   const subtab = e.target.closest('.mesas-subtab');
   if(subtab) {
     mesasSubView = subtab.dataset.sub;
