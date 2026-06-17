@@ -7,75 +7,81 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="favicon.ico" type="image/x-icon">
 <link rel="apple-touch-icon" href="icon-192.png">
-<meta name="theme-color" content="#1a1208">
+<meta name="theme-color" content="#F7F6F2">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="La Ciudadela">
 <meta name="description" content="Agenda de mesas de juegos de rol — La Ciudadela de los Confines, Lima 575, CABA">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Cinzel+Decorative:wght@700&family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
 :root{
-  --ink:#111;
-  --ink2:#333;
-  --muted:#666;
-  --bg:#fff;
-  --bg2:#f7f7f5;
-  --bg3:#efefec;
+  --ink:#111110;
+  --ink2:#3A3A38;
+  --muted:#5C5A54;
+  --bg:#FFFFFF;
+  --bg2:#F7F6F2;
+  --bg3:#EEECEA;
   --red:#7a1515;
   --red-light:#f9f0f0;
-  --gold:#8a6a1a;
-  --gold2:#c4a030;
-  --brd:#ddd;
-  --brd-dark:#bbb;
-  --header-bg:#1a1208;
+  --gold:#B8940A;
+  --gold2:#B8940A;
+  --brd:#E8E6E0;
+  --brd-dark:#D0CCC0;
+  --header-bg:#FFFFFF;
 }
-html,body{min-height:100%;background:#1a1208;}
-body{font-family:'Nunito',system-ui,sans-serif;color:var(--ink);}
+html,body{min-height:100%;background:#F7F6F2;}
+body{font-family:'Inter',system-ui,sans-serif;color:var(--ink);}
 
 /* ── HEADER ──────────────────────────────────────────── */
 .site-header{
-  background:var(--header-bg);
-  padding:16px;
+  background:var(--bg);
+  padding:0 20px;
+  height:60px;
   display:flex;
-  flex-direction:column;
+  flex-direction:row;
   align-items:center;
-  gap:14px;
-  border-bottom:2px solid var(--gold2);
+  justify-content:space-between;
+  gap:12px;
+  border-bottom:1px solid var(--brd);
+  position:sticky;
+  top:0;
+  z-index:100;
+  box-shadow:0 1px 3px rgba(0,0,0,.06);
 }
 .header-top{
   display:flex;
   align-items:center;
-  gap:14px;
+  gap:12px;
   width:100%;
-  max-width:700px;
+  max-width:900px;
+  height:100%;
 }
 .header-logo{
-  height:56px;
+  height:36px;
   width:auto;
   flex-shrink:0;
-  filter:invert(1) brightness(1.1);
+  
 }
 .header-titles{
   flex:1;
 }
 .header-name{
-  font-family:'Cinzel Decorative',serif;
+  font-family:'Cinzel',serif;
   font-weight:700;
-  font-size:clamp(13px,3.5vw,20px);
-  color:#fff;
-  letter-spacing:.04em;
+  font-size:clamp(13px,3.5vw,18px);
+  color:var(--ink);
+  letter-spacing:.02em;
   line-height:1.2;
 }
 .header-sub{
-  font-family:'Cinzel',serif;
+  font-family:'Inter',sans-serif;
   font-size:clamp(8px,2vw,11px);
-  letter-spacing:.18em;
-  color:var(--gold2);
-  text-transform:uppercase;
-  margin-top:4px;
+  letter-spacing:.06em;
+  color:var(--muted);
+  margin-top:2px;
 }
 
 /* ── NAV BAR ─────────────────────────────────────────── */
@@ -84,22 +90,27 @@ body{font-family:'Nunito',system-ui,sans-serif;color:var(--ink);}
   align-items:center;
   justify-content:space-between;
   width:100%;
-  max-width:700px;
+  max-width:900px;
   gap:8px;
+  padding:10px 20px;
+  background:var(--bg);
+  border-bottom:1px solid var(--brd);
+  margin:0 auto;
+  box-sizing:border-box;
 }
 .nav-period{
   font-family:'Cinzel',serif;
   font-weight:700;
   font-size:clamp(12px,3vw,16px);
-  color:#fff;
+  color:var(--ink);
   text-align:center;
   flex:1;
-  letter-spacing:.04em;
+  letter-spacing:.02em;
 }
 .nav-arrow{
   background:transparent;
-  border:1px solid var(--gold2);
-  color:var(--gold2);
+  border:1px solid var(--brd);
+  color:var(--ink);
   width:34px;
   height:34px;
   font-size:16px;
@@ -111,37 +122,38 @@ body{font-family:'Nunito',system-ui,sans-serif;color:var(--ink);}
   transition:all .15s;
   font-family:serif;
 }
-.nav-arrow:hover{background:var(--gold2);color:var(--header-bg);}
+.nav-arrow:hover{background:var(--ink);color:var(--header-bg);}
 .nav-today{
   font-family:'Cinzel',serif;
   font-size:10px;
   letter-spacing:.1em;
   text-transform:uppercase;
   background:transparent;
-  border:1px solid var(--gold2);
+  border:1px solid var(--brd);
   color:var(--gold2);
   padding:6px 12px;
   cursor:pointer;
   white-space:nowrap;
   transition:all .15s;
 }
-.nav-today:hover{background:var(--gold2);color:var(--header-bg);}
+.nav-today:hover{background:var(--ink);color:var(--header-bg);}
 
 /* ── VIEW TABS ───────────────────────────────────────── */
 .view-tabs{
   display:flex;
   gap:0;
-  border:1px solid var(--gold2);
+  border:1px solid var(--brd);
   flex-shrink:0;
 }
 .view-tab{
   background:transparent;
   border:none;
-  border-right:1px solid var(--gold2);
+  border-right:1px solid var(--brd);
   padding:6px 12px;
-  font-family:'Cinzel',serif;
-  font-size:9px;
-  letter-spacing:.1em;
+  font-family:'Inter',sans-serif;
+  font-size:11px;
+  font-weight:600;
+  letter-spacing:.04em;
   text-transform:uppercase;
   cursor:pointer;
   color:var(--gold2);
@@ -150,7 +162,7 @@ body{font-family:'Nunito',system-ui,sans-serif;color:var(--ink);}
 }
 .view-tab:last-child{border-right:none;}
 .view-tab:hover{background:rgba(196,160,48,.15);}
-.view-tab.active{background:var(--gold2);color:var(--header-bg);}
+.view-tab.active{background:var(--ink);color:var(--header-bg);}
 
 /* ── MAIN ────────────────────────────────────────────── */
 .main{
@@ -164,7 +176,7 @@ body{font-family:'Nunito',system-ui,sans-serif;color:var(--ink);}
 .agenda-loading{
   padding:40px 20px;
   text-align:center;
-  font-family:'Nunito',sans-serif;
+  font-family:'Inter',sans-serif;
   font-style:italic;
   font-size:16px;
   color:var(--muted);
@@ -172,7 +184,7 @@ body{font-family:'Nunito',system-ui,sans-serif;color:var(--ink);}
 .agenda-empty{
   padding:32px 20px;
   text-align:center;
-  font-family:'Nunito',sans-serif;
+  font-family:'Inter',sans-serif;
   font-style:italic;
   font-size:15px;
   color:var(--muted);
@@ -183,7 +195,7 @@ body{font-family:'Nunito',system-ui,sans-serif;color:var(--ink);}
 .day-section{border-bottom:2px solid var(--ink);}
 .day-header{
   background:var(--ink);
-  color:#fff;
+  color:var(--ink);
   padding:10px 16px;
   display:flex;
   align-items:baseline;
@@ -195,10 +207,10 @@ body{font-family:'Nunito',system-ui,sans-serif;color:var(--ink);}
   font-size:14px;
   letter-spacing:.1em;
   text-transform:uppercase;
-  color:#fff;
+  color:var(--ink);
 }
 .day-date{
-  font-family:'Nunito',sans-serif;
+  font-family:'Inter',sans-serif;
   font-size:13px;
   color:var(--gold2);
 }
@@ -253,7 +265,7 @@ body{font-family:'Nunito',system-ui,sans-serif;color:var(--ink);}
   display:flex;
   align-items:center;
   gap:4px;
-  font-family:'Nunito',sans-serif;
+  font-family:'Inter',sans-serif;
   font-size:11px;
   color:var(--ink2);
 }
@@ -265,7 +277,7 @@ body{font-family:'Nunito',system-ui,sans-serif;color:var(--ink);}
   color:var(--muted);
 }
 .mesa-sinopsis{
-  font-family:'Nunito',sans-serif;
+  font-family:'Inter',sans-serif;
   font-style:normal;
   font-size:13px;
   color:var(--ink2);
@@ -281,7 +293,7 @@ body{font-family:'Nunito',system-ui,sans-serif;color:var(--ink);}
   margin-top:10px;
 }
 .mesa-horario{
-  font-family:'Nunito',sans-serif;
+  font-family:'Inter',sans-serif;
   font-size:13px;
   font-weight:bold;
   color:var(--ink);
@@ -329,7 +341,7 @@ body{font-family:'Nunito',system-ui,sans-serif;color:var(--ink);}
 }
 .modal-header{
   background:var(--ink);
-  color:#fff;
+  color:var(--ink);
   padding:14px 16px 12px;
   position:relative;
 }
@@ -355,7 +367,7 @@ body{font-family:'Nunito',system-ui,sans-serif;color:var(--ink);}
   font-size:14px;cursor:pointer;
   display:flex;align-items:center;justify-content:center;
 }
-.modal-close:hover{background:#333;color:#fff;}
+.modal-close:hover{background:#333;color:var(--ink);}
 .modal-body{padding:16px;}
 .modal-row{
   display:flex;gap:0;margin-bottom:10px;align-items:flex-start;
@@ -368,7 +380,7 @@ body{font-family:'Nunito',system-ui,sans-serif;color:var(--ink);}
   color:var(--muted);min-width:80px;padding-top:2px;
 }
 .modal-val{
-  font-family:'Nunito',sans-serif;
+  font-family:'Inter',sans-serif;
   font-size:14px;color:var(--ink);line-height:1.4;
 }
 .modal-actions{
@@ -386,11 +398,11 @@ body{font-family:'Nunito',system-ui,sans-serif;color:var(--ink);}
   background:#fff;color:var(--ink);
   transition:all .15s;
 }
-.action-btn:hover{background:var(--ink);color:#fff;}
+.action-btn:hover{background:var(--ink);color:var(--ink);}
 .action-btn.wa{border-color:#1a5a1a;color:#1a5a1a;}
-.action-btn.wa:hover{background:#1a5a1a;color:#fff;}
+.action-btn.wa:hover{background:#1a5a1a;color:var(--ink);}
 .action-btn.ig{border-color:#5a1a4a;color:#5a1a4a;}
-.action-btn.ig:hover{background:#5a1a4a;color:#fff;}
+.action-btn.ig:hover{background:#5a1a4a;color:var(--ink);}
 
 /* ── LEGEND ──────────────────────────────────────────── */
 .legend{
@@ -415,7 +427,7 @@ body{font-family:'Nunito',system-ui,sans-serif;color:var(--ink);}
 
 /* ── DESKTOP LAYOUT (≥ 768px) ───────────────────────── */
 @media (min-width: 768px) {
-  body { background: #1a1208; }
+  body { background: #F7F6F2; }
 
   .site-header {
     position: sticky;
@@ -450,14 +462,14 @@ body{font-family:'Nunito',system-ui,sans-serif;color:var(--ink);}
     font-size: 10px;
     letter-spacing: .16em;
     text-transform: uppercase;
-    color: #c4a030;
+    color: var(--ink);
     margin-bottom: 12px;
     padding-bottom: 8px;
     border-bottom: 1px solid #333;
   }
   .sidebar-legend { margin-bottom: 24px; }
   .sidebar-legend .legend-item {
-    font-family: 'Nunito', sans-serif;
+    font-family: 'Inter', sans-serif;
     font-size: 12px;
     color: #ccc;
     padding: 4px 0;
@@ -473,7 +485,7 @@ body{font-family:'Nunito',system-ui,sans-serif;color:var(--ink);}
     align-items: center;
     padding: 5px 0;
     border-bottom: 1px solid #222;
-    font-family: 'Nunito', sans-serif;
+    font-family: 'Inter', sans-serif;
     font-size: 12px;
     color: #aaa;
   }
@@ -481,16 +493,16 @@ body{font-family:'Nunito',system-ui,sans-serif;color:var(--ink);}
     font-family: 'Cinzel', serif;
     font-weight: 700;
     font-size: 15px;
-    color: #c4a030;
+    color: var(--ink);
   }
 
   .sidebar-info {
-    font-family: 'Nunito', sans-serif;
+    font-family: 'Inter', sans-serif;
     font-size: 11px;
     color: #888;
     line-height: 1.6;
   }
-  .sidebar-info a { color: #c4a030; text-decoration: none; }
+  .sidebar-info a { color: var(--gold); text-decoration: none; }
 
   /* Main content area */
   .main {
@@ -529,7 +541,7 @@ body{font-family:'Nunito',system-ui,sans-serif;color:var(--ink);}
     max-height: 80vh;
     border-radius: 4px;
     border-top: none;
-    border: 2px solid #1a1208;
+    border: 2px solid #F7F6F2;
   }
 
   /* Legend goes to sidebar, hide bottom legend on desktop */
@@ -552,7 +564,7 @@ body{font-family:'Nunito',system-ui,sans-serif;color:var(--ink);}
   transition: background .12s; user-select: none;
 }
 .filter-item:hover { background: #222; }
-.filter-item.active { background: #2a2010; }
+.filter-item.active { background: var(--bg2); }
 .filter-item input[type=checkbox] { display: none; }
 .filter-check {
   width: 14px; height: 14px; border: 1.5px solid #555;
@@ -571,7 +583,7 @@ body{font-family:'Nunito',system-ui,sans-serif;color:var(--ink);}
 }
 .filter-item.active .filter-check::after { display: block; }
 .filter-label {
-  font-family: 'Nunito', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 13px; color: #ccc; flex: 1;
 }
 .filter-item.active .filter-label { color: #fff; }
@@ -609,7 +621,7 @@ body{font-family:'Nunito',system-ui,sans-serif;color:var(--ink);}
 /* Mobile filter panel */
 .mobile-filter-bar {
   display: none;
-  background: #1a1208;
+  background: #F7F6F2;
   padding: 8px 14px;
   gap: 8px;
   align-items: center;
@@ -675,9 +687,9 @@ body{font-family:'Nunito',system-ui,sans-serif;color:var(--ink);}
 
 /* Active filter indicator in agenda */
 .filter-active-bar {
-  background: #2a2010; border-bottom: 1px solid #c4a030;
-  padding: 6px 16px; font-family: 'Nunito', sans-serif;
-  font-size: 12px; color: #c4a030; display: none;
+  background: var(--bg2); border-bottom: 1px solid var(--brd);
+  padding: 6px 16px; font-family: 'Inter', sans-serif;
+  font-size: 12px; color: var(--gold); display: none;
 }
 .filter-active-bar.show { display: block; }
 
@@ -707,7 +719,7 @@ body{font-family:'Nunito',system-ui,sans-serif;color:var(--ink);}
   color: var(--gold2);
 }
 .mesas-header-sub {
-  font-family: 'Nunito', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 12px;
   color: #aaa;
 }
@@ -742,7 +754,7 @@ body{font-family:'Nunito',system-ui,sans-serif;color:var(--ink);}
   text-overflow: ellipsis;
 }
 .mesa-row-sys {
-  font-family: 'Nunito', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 11px;
   color: var(--muted);
   white-space: nowrap;
@@ -750,7 +762,7 @@ body{font-family:'Nunito',system-ui,sans-serif;color:var(--ink);}
   flex-shrink: 0;
 }
 .mesa-row-schedule {
-  font-family: 'Nunito', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 11px;
   color: var(--ink2);
   white-space: nowrap;
@@ -843,14 +855,14 @@ body{font-family:'Nunito',system-ui,sans-serif;color:var(--ink);}
 /* ── AUTH / USUARIO ───────────────────────────────────── */
 .auth-btn {
   display:flex; align-items:center; gap:6px;
-  background:transparent; border:1px solid var(--gold2); color:var(--gold2);
+  background:transparent; border:1px solid var(--brd); color:var(--gold2);
   font-family:'Cinzel',serif; font-size:9px; letter-spacing:.1em;
   text-transform:uppercase; padding:6px 10px; cursor:pointer;
   white-space:nowrap; flex-shrink:0; transition:all .15s;
 }
-.auth-btn:hover { background:var(--gold2); color:var(--header-bg); }
+.auth-btn:hover { background:var(--ink); color:var(--header-bg); }
 .auth-avatar {
-  width:28px; height:28px; border-radius:50%; border:1px solid var(--gold2);
+  width:28px; height:28px; border-radius:50%; border:1px solid var(--brd);
   object-fit:cover; flex-shrink:0;
 }
 .auth-user-menu {
@@ -858,7 +870,7 @@ body{font-family:'Nunito',system-ui,sans-serif;color:var(--ink);}
 }
 .auth-dropdown {
   display:none; position:absolute; top:38px; right:0; z-index:200;
-  background:var(--header-bg); border:1px solid var(--gold2);
+  background:var(--bg); border:1px solid var(--brd);
   min-width:180px; padding:4px 0;
 }
 .auth-dropdown.open { display:block; }
@@ -872,7 +884,7 @@ body{font-family:'Nunito',system-ui,sans-serif;color:var(--ink);}
 .auth-dropdown-item:hover { background:rgba(196,160,48,.12); }
 .auth-dropdown-item.danger { color:#c04040; }
 .auth-name {
-  font-family:'Cinzel',serif; font-size:9px; color:#fff;
+  font-family:'Cinzel',serif; font-size:9px; color:var(--ink);
   letter-spacing:.06em; max-width:90px; overflow:hidden;
   text-overflow:ellipsis; white-space:nowrap;
 }
@@ -880,24 +892,24 @@ body{font-family:'Nunito',system-ui,sans-serif;color:var(--ink);}
 /* ── MODAL LOGIN ──────────────────────────────────────── */
 .login-modal-overlay {
   display:none; position:fixed; inset:0; z-index:500;
-  background:rgba(0,0,0,.75); align-items:center; justify-content:center;
+  background:rgba(0,0,0,.4); align-items:center; justify-content:center; backdrop-filter:blur(2px);
 }
 .login-modal-overlay.open { display:flex; }
 .login-modal {
-  background:var(--header-bg); border:1px solid var(--gold2);
+  background:var(--bg); border-radius:16px; border:1px solid var(--brd); box-shadow:0 20px 60px rgba(0,0,0,.12);
   padding:36px 32px; max-width:340px; width:90%; text-align:center;
 }
 .login-modal-title {
-  font-family:'Cinzel Decorative',serif; font-size:16px; color:var(--gold2);
+  font-family:'Cinzel',serif; font-size:16px; color:var(--gold2);
   margin-bottom:8px;
 }
 .login-modal-sub {
-  font-family:'Nunito',sans-serif; font-size:13px; color:#bbb;
+  font-family:'Inter',sans-serif; font-size:13px; color:#bbb;
   margin-bottom:28px; line-height:1.5;
 }
 .login-google-btn {
   display:flex; align-items:center; justify-content:center; gap:10px;
-  background:#fff; color:#1a1208; border:none; padding:12px 20px;
+  background:#fff; color:#F7F6F2; border:none; padding:12px 20px;
   font-family:'Cinzel',serif; font-size:11px; letter-spacing:.1em;
   text-transform:uppercase; cursor:pointer; width:100%; margin-bottom:12px;
   transition:opacity .15s;
@@ -934,7 +946,7 @@ body{font-family:'Nunito',system-ui,sans-serif;color:var(--ink);}
     </div>
     <!-- Zona auth -->
     <div id="authZone" style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
-      <a href="https://laciudadela-dlc.github.io/" style="font-family:'Cinzel',serif;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--gold2);text-decoration:none;border:1px solid var(--gold2);padding:6px 12px;white-space:nowrap;transition:all .15s;" onmouseover="this.style.background='var(--gold2)';this.style.color='var(--header-bg)'" onmouseout="this.style.background='transparent';this.style.color='var(--gold2)'">&#8592; Portal</a>
+      <a href="https://laciudadela-dlc.github.io/" style="font-family:'Cinzel',serif;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--gold2);text-decoration:none;border:1px solid var(--brd);padding:6px 12px;white-space:nowrap;transition:all .15s;" onmouseover="this.style.background='var(--gold2)';this.style.color='var(--header-bg)'" onmouseout="this.style.background='transparent';this.style.color='var(--gold2)'">&#8592; Portal</a>
       <button class="auth-btn" id="loginBtn" onclick="window.AUTH.openLogin()" style="display:none">Ingresar</button>
       <div class="auth-user-menu" id="userMenu" style="display:none" onclick="window.AUTH.toggleDropdown()">
         <img class="auth-avatar" id="userAvatar" src="" alt="">
