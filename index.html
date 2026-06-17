@@ -355,7 +355,7 @@ body{font-family:'DM Sans',sans-serif;color:var(--ink);}
   font-size:14px;cursor:pointer;
   display:flex;align-items:center;justify-content:center;
 }
-.modal-close:hover{background:#333;color:var(--ink);}
+.modal-close:hover{background:var(--bg3);color:var(--ink);}
 .modal-body{padding:16px;}
 .modal-row{
   display:flex;gap:0;margin-bottom:10px;align-items:flex-start;
@@ -433,8 +433,8 @@ body{font-family:'DM Sans',sans-serif;color:var(--ink);}
 
   /* Sidebar on desktop */
   .sidebar {
-    background: #111;
-    color: #eee;
+    background: var(--bg2);
+    color: var(--ink);
     padding: 20px 16px;
     border-right:1px solid var(--brd);
     position: sticky;
@@ -448,7 +448,7 @@ body{font-family:'DM Sans',sans-serif;color:var(--ink);}
   .sidebar-title {
     font-family: 'Cinzel', serif;
     font-size: 10px;
-    letter-spacing: .16em;
+    letter-spacing:.03em;
     text-transform: uppercase;
     color:var(--ink2);
     margin-bottom: 12px;
@@ -551,7 +551,7 @@ body{font-family:'DM Sans',sans-serif;color:var(--ink);}
   padding: 6px 8px; cursor: pointer; border-radius: 4px;
   transition: background .12s; user-select: none;
 }
-.filter-item:hover { background: #222; }
+.filter-item:hover { background: var(--bg3); }
 .filter-item.active { background: var(--bg2); }
 .filter-item input[type=checkbox] { display: none; }
 .filter-check {
@@ -637,7 +637,7 @@ body{font-family:'DM Sans',sans-serif;color:var(--ink);}
 
 .filter-panel {
   display: none;
-  background: #111;
+  background: var(--bg2);
   border-bottom: 2px solid var(--gold2);
   padding: 14px;
 }
@@ -979,7 +979,7 @@ body{font-family:'DM Sans',sans-serif;color:var(--ink);}
     ⚔ Filtros
     <span class="mobile-filter-badge" id="filterBadge">0</span>
   </button>
-  <span id="mobileActiveLabel" style="font-family:'DM Sans',sans-serif;font-size:11px;color:#c4a030;flex:1;"></span>
+  <span id="mobileActiveLabel" style="font-family:'DM Sans',sans-serif;font-size:11px;color:var(--ink2);flex:1;"></span>
 </div>
 
 <!-- Mobile filter panel -->
