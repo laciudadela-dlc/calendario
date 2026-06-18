@@ -1089,8 +1089,8 @@ body{font-family:'DM Sans',sans-serif;color:var(--ink);}
 <script type="module">
   import { initializeApp }
     from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-  import { getFirestore, doc, getDoc, setDoc,
-           collection, getDocs, writeBatch, query, orderBy, limit, where }
+  import { getFirestore, doc, getDoc, setDoc, addDoc,
+           collection, getDocs, writeBatch, query, orderBy, limit, where, serverTimestamp }
     from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
   import { getAuth, GoogleAuthProvider, signInWithPopup,
            signOut, onAuthStateChanged }
@@ -1102,7 +1102,7 @@ body{font-family:'DM Sans',sans-serif;color:var(--ink);}
 
   window.FB = {
     db, auth,
-    doc, getDoc, setDoc, collection, getDocs, writeBatch, query, orderBy, limit, where,
+    doc, getDoc, setDoc, collection, getDocs, writeBatch, query, orderBy, limit, where, addDoc, serverTimestamp,
     GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged
   };
   if (window._fbResolve) window._fbResolve();
@@ -1656,6 +1656,88 @@ function renderAgenda(evs){
 var _mesasCache = null;
 var _mesasCacheTs = 0;
 
+
+// ── SOLICITUDES ───────────────────────────────────────────
+// Cache solicitudes del usuario actual
+var _misSolicitudes = {}; // mesaId -> estado
+
+async function cargarMisSolicitudes() {
+  var user = window.AUTH && window.AUTH.getUser ? window.AUTH.getUser() : null;
+  if (!user) return {};
+  var { collection, getDocs, db } = window.FB;
+  // Leer todas las mesas y buscar solicitud del uid
+  // Estructura: mesas/{mesaId}/solicitudes/{uid}
+  var { doc, getDoc } = window.FB;
+  var mesas = _mesasCache || [];
+  var result = {};
+  for (var i = 0; i < mesas.length; i++) {
+    var mesaId = mesas[i].id;
+    try {
+      var ref = doc(db, 'mesas', mesaId, 'solicitudes', user.uid);
+      var snap = await getDoc(ref);
+      if (snap.exists()) {
+        result[mesaId] = snap.data().estado;
+      }
+    } catch(e) { /* sin solicitud */ }
+  }
+  _misSolicitudes = result;
+  return result;
+}
+
+async function solicitarMesa(mesaId) {
+  var user = window.AUTH && window.AUTH.getUser ? window.AUTH.getUser() : null;
+  if (!user) {
+    alert('Tenés que iniciar sesión para solicitar unirte a una mesa.');
+    return;
+  }
+
+  var { doc, setDoc, addDoc, collection, serverTimestamp, db } = window.FB;
+
+  try {
+    // Crear solicitud en mesas/{mesaId}/solicitudes/{uid}
+    var solRef = doc(db, 'mesas', mesaId, 'solicitudes', user.uid);
+    await setDoc(solRef, {
+      uid:       user.uid,
+      nombre:    user.displayName || '',
+      email:     user.email || '',
+      estado:    'pendiente',
+      mesaId:    mesaId,
+      creadaEn:  serverTimestamp(),
+    });
+
+    // Notificación a admins
+    var adminSnap = await (window.FB.getDocs)(
+      (window.FB.query)(
+        collection(db, 'usuarios'),
+        (window.FB.where)('roles', 'array-contains', 'admin')
+      )
+    );
+    var mesaData = (_mesasCache || []).find(function(m){ return m.id === mesaId; }) || {};
+    var nombre = user.displayName || user.email || 'Un usuario';
+
+    for (var i = 0; i < adminSnap.docs.length; i++) {
+      var adminId = adminSnap.docs[i].id;
+      await addDoc(collection(db, 'notificaciones', adminId, 'items'), {
+        tipo:      'solicitud_mesa',
+        titulo:    nombre + ' quiere unirse a una mesa',
+        cuerpo:    '"' + (mesaData.nombre || mesaId) + '"',
+        mesaId:    mesaId,
+        solUid:    user.uid,
+        leida:     false,
+        creadoEn:  serverTimestamp(),
+      });
+    }
+
+    // Actualizar cache local y re-renderizar
+    _misSolicitudes[mesaId] = 'pendiente';
+    await renderMesas(allLoadedEvents);
+
+  } catch(e) {
+    console.error('solicitarMesa:', e);
+    alert('Error al enviar la solicitud. Intentá de nuevo.');
+  }
+}
+
 async function cargarMesasFS(force) {
   var now = Date.now();
   if (!force && _mesasCache && (now - _mesasCacheTs) < 5 * 60 * 1000) return _mesasCache;
@@ -1690,7 +1772,7 @@ function formatProxFecha(iso) {
   return dias[d.getDay()] + ' ' + d.getDate() + ' ' + meses[d.getMonth()] + ' · ' + hora + 'hs';
 }
 
-function makeMesaCard(mesa, isAdmin) {
+function makeMesaCard(mesa, isAdmin, solicitudEstado) {
   var code = sistemaToCode(mesa.sistema);
   var dot  = SYS_DOT[code] || '#888';
   var sys  = mesa.sistema || 'Otro sistema';
@@ -1698,15 +1780,16 @@ function makeMesaCard(mesa, isAdmin) {
   var prox = formatProxFecha(mesa.proximaFecha);
   var per  = mesa.periodicidad || '';
   var sin  = mesa.sinopsis || '';
+  var uid  = window.AUTH && window.AUTH.getUser ? (window.AUTH.getUser() || {}).uid : null;
 
   var perioBadge = per
-    ? '<span style="font-family:\'DM Sans\',sans-serif;font-size:10px;font-weight:600;'
+    ? '<span style="font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;'
       + 'background:var(--bg3);color:var(--ink2);padding:2px 8px;border-radius:20px;'
       + 'margin-left:8px;white-space:nowrap;">' + per + '</span>'
     : '';
 
   var incBadge = (mesa.estado === 'incompleta' && isAdmin)
-    ? '<span style="font-family:\'DM Sans\',sans-serif;font-size:10px;font-weight:600;'
+    ? '<span style="font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;'
       + 'background:var(--red);color:#fff;padding:2px 8px;border-radius:20px;margin-left:8px;">'
       + 'Incompleta</span>'
     : '';
@@ -1714,28 +1797,57 @@ function makeMesaCard(mesa, isAdmin) {
   var cardStyle = mesa.estado === 'incompleta'
     ? 'border-left:3px solid var(--red);' : '';
 
+  // Botón de solicitud según estado
+  var btnHtml = '';
+  if (uid && !isAdmin) {
+    // Ver si el usuario ya es jugador de esta mesa
+    var jugadores = mesa.jugadores || [];
+    var yaEsJugador = jugadores.some(function(j) { return j.uid === uid; });
+    var esDM = mesa.dm && mesa.dm === (window._authProfile && window._authProfile.displayName);
+
+    if (yaEsJugador || esDM) {
+      btnHtml = '<span style="font-family:'DM Sans',sans-serif;font-size:11px;font-weight:600;'
+        + 'color:#166534;background:#DCFCE7;padding:4px 12px;border-radius:20px;">✓ En esta mesa</span>';
+    } else if (solicitudEstado === 'pendiente') {
+      btnHtml = '<span style="font-family:'DM Sans',sans-serif;font-size:11px;font-weight:600;'
+        + 'color:#92400E;background:#FEF3C7;padding:4px 12px;border-radius:20px;">⏳ Solicitud pendiente</span>';
+    } else if (solicitudEstado === 'rechazada') {
+      btnHtml = '<span style="font-family:'DM Sans',sans-serif;font-size:11px;font-weight:600;'
+        + 'color:var(--red);background:var(--red-light);padding:4px 12px;border-radius:20px;">✗ Solicitud rechazada</span>';
+    } else {
+      btnHtml = '<button onclick="solicitarMesa('' + mesa.id + '')" '
+        + 'style="font-family:'DM Sans',sans-serif;font-size:11px;font-weight:600;'
+        + 'background:var(--ink);color:#fff;border:none;padding:4px 14px;border-radius:20px;'
+        + 'cursor:pointer;white-space:nowrap;">+ Solicitar unirse</button>';
+    }
+  }
+
   return '<div style="padding:14px 16px;border-bottom:1px solid var(--brd);' + cardStyle + '">'
     + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">'
     +   '<div style="width:10px;height:10px;border-radius:50%;flex-shrink:0;background:' + dot + '"></div>'
-    +   '<span style="font-family:\'DM Sans\',sans-serif;font-weight:700;font-size:14px;'
+    +   '<span style="font-family:'DM Sans',sans-serif;font-weight:700;font-size:14px;'
     +         'color:var(--ink);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'
     +     mesa.nombre + incBadge
     +   '</span>'
     +   perioBadge
     + '</div>'
-    + '<div style="display:flex;flex-wrap:wrap;gap:4px 14px;font-family:\'DM Sans\',sans-serif;'
+    + '<div style="display:flex;flex-wrap:wrap;gap:4px 14px;font-family:'DM Sans',sans-serif;'
     +      'font-size:12px;color:var(--muted);margin-bottom:' + (sin ? '6' : '0') + 'px;">'
     +   '<span style="font-weight:600;color:var(--ink2);">' + sys + '</span>'
     +   '<span>DM: ' + dm + '</span>'
     +   '<span style="color:var(--ink);font-weight:500;">📅 ' + prox + '</span>'
     + '</div>'
     + (sin
-      ? '<div style="font-family:\'DM Sans\',sans-serif;font-size:12px;color:var(--muted);'
+      ? '<div style="font-family:'DM Sans',sans-serif;font-size:12px;color:var(--muted);'
         + 'line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">'
         + sin + '</div>'
       : '')
+    + (btnHtml
+      ? '<div style="margin-top:10px;">' + btnHtml + '</div>'
+      : '')
     + '</div>';
 }
+
 
 function makeGroupHeader(dot, label, count) {
   return '<div style="display:flex;align-items:center;gap:8px;padding:8px 16px;'
@@ -1758,6 +1870,7 @@ async function renderMesas(evs) {
   var mesas;
   try {
     mesas = await cargarMesasFS(false);
+    await cargarMisSolicitudes();
   } catch(e) {
     body.innerHTML = '<div class="agenda-empty">Error al cargar mesas. Intentá de nuevo.</div>';
     console.error('renderMesas:', e);
@@ -1823,7 +1936,7 @@ async function renderMesas(evs) {
     SYS_ORDER.forEach(function(s) {
       if (!grupos[s] || !grupos[s].length) return;
       html += makeGroupHeader(SYS_DOT[s] || '#888', SYS_NAMES2[s] || s, grupos[s].length);
-      grupos[s].forEach(function(m){ html += makeMesaCard(m, isAdmin); });
+      grupos[s].forEach(function(m){ html += makeMesaCard(m, isAdmin, _misSolicitudes[m.id]); });
     });
 
   } else if (mesasSubView === 'dm') {
@@ -1839,7 +1952,7 @@ async function renderMesas(evs) {
     });
     dmKeys.forEach(function(k) {
       html += makeGroupHeader('var(--ink2)', k || 'Director a confirmar', dmMap[k].length);
-      dmMap[k].forEach(function(m){ html += makeMesaCard(m, isAdmin); });
+      dmMap[k].forEach(function(m){ html += makeMesaCard(m, isAdmin, _misSolicitudes[m.id]); });
     });
 
   } else {
@@ -1869,7 +1982,7 @@ async function renderMesas(evs) {
       var g = mMapM[mod.k] || [];
       if (!g.length) return;
       html += makeGroupHeader(mod.c, mod.l, g.length);
-      g.forEach(function(m){ html += makeMesaCard(m, isAdmin); });
+      g.forEach(function(m){ html += makeMesaCard(m, isAdmin, _misSolicitudes[m.id]); });
     });
   }
 
