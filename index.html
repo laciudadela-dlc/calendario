@@ -1513,13 +1513,9 @@ document.getElementById('todayBtn').addEventListener('click',()=>{
 document.querySelectorAll('.view-tab').forEach(btn=>{
   btn.addEventListener('click',()=>{
     viewMode=btn.dataset.view;
-    document.querySelectorAll('.view-tab').forEach(t=>t.classList.toggle('active',t===btn));).catch(err=>{
-        document.getElementById('agendaContent').innerHTML='<div class="agenda-loading">⚔ Error: '+err.message+'</div>';
-      });
-    } else {
-      anchorDate=new Date(now);
-      loadAndRender();
-    }
+    document.querySelectorAll('.view-tab').forEach(t=>t.classList.toggle('active',t===btn));
+    anchorDate=new Date();
+    loadAndRender();
   });
 });
 
