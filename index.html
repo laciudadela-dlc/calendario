@@ -1484,11 +1484,10 @@ async function loadAndRender(){
       return fetchEvents(y,m);
     });
     const results=await Promise.all(fetches);
-    allLoadedEvents=results.flat(); else {
-      const counts=countsBySys(allLoadedEvents.filter(e=>{const {start,end}=getDateRange();return e.date>=start&&e.date<=end;}));
-      buildAllFilterUI(counts);
-      renderAgenda(allLoadedEvents);
-    }
+    allLoadedEvents=results.flat();
+    const counts=countsBySys(allLoadedEvents.filter(e=>{const {start,end}=getDateRange();return e.date>=start&&e.date<=end;}));
+    buildAllFilterUI(counts);
+    renderAgenda(allLoadedEvents);
   } catch(err){
     document.getElementById('agendaBody').innerHTML='<div class="agenda-loading">⚔ No se pudo conectar con el calendario.<br><small>'+err.message+'</small></div>';
   }
