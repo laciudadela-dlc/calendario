@@ -1368,8 +1368,8 @@ async function fetchEvents(year, month) {
 
 // Sync en background: solo trae lo modificado desde la última sync
 async function _backgroundSync(year, month) {
-  const lastSync = await getLastSync();
-  const items    = await fetchFromGCal(year, month, lastSync);
+  // No usar lastSync — siempre traer todos los eventos para reflejar ediciones de Google Calendar
+  const items = await fetchFromGCal(year, month, null);
   if (items.length === 0) return;
   const changes = await syncToFirestore(year, month, items);
   if (changes > 0) {
