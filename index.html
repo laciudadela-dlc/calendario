@@ -775,6 +775,7 @@ body{font-family:'DM Sans',sans-serif;color:var(--ink);}
   margin-bottom:8px;
   display:-webkit-box;-webkit-line-clamp:3;
   -webkit-box-orient:vertical;overflow:hidden;
+  word-break:break-word;overflow-wrap:break-word;
 }
 .mesa-footer{
   display:flex;align-items:center;gap:8px;
@@ -1506,7 +1507,7 @@ function renderAgenda(evs){
           <div class="meta-item"><span class="meta-label">Hora</span>&nbsp;${ft(ev.h,ev.mn)} – ${ft(endH,endM)} hs</div>
           ${ev.dm?`<div class="meta-item"><span class="meta-label">DM</span>&nbsp;${ev.dm}</div>`:''}
           ${ev.cupos?`<div class="meta-item"><span class="meta-label">Cupos</span>&nbsp;${ev.cupos}</div>`:''}
-          ${ev.periodicidad?`<div class="meta-item"><span class="meta-label">Frecuencia</span>&nbsp;${ev.periodicidad}</div>`:''}
+          ${ev.periodicidad?`<div class="meta-item"><span class="meta-label">Frecuencia</span>&nbsp;${ev.periodicidad.split('.')[0].split('\n')[0].substring(0,30)}</div>`:''}
         </div>
         ${ev.sinopsis?`<div class="mesa-sinopsis">${ev.sinopsis}</div>`:''}
         <div class="mesa-footer">
