@@ -1490,17 +1490,9 @@ function renderAgenda(evs){
       </div>`;
 
     dayEvs.forEach(ev=>{
-      // Calcular hora fin desde dateISO + duracion para evitar errores con h/mn
-      let endH, endM;
-      if (ev.dateISO) {
-        const endDate = new Date(new Date(ev.dateISO).getTime() + ev.dur * 60000);
-        endH = endDate.getHours();
-        endM = endDate.getMinutes();
-      } else {
-        endH = ev.h + Math.floor((ev.mn + ev.dur) / 60);
-        endM = (ev.mn + ev.dur) % 60;
-      }
-      endH = endH % 24; // normalizar si pasa medianoche
+      const totalMins = ev.h * 60 + ev.mn + ev.dur;
+      const endH = Math.floor(totalMins / 60) % 24;
+      const endM = totalMins % 60;
       const sysLabel=SYS_LABELS[ev.sys]||'Otro';
       const sysCls=SYS_CLASS[ev.sys]||'s-oth';
       const dotColor=SYS_DOT[ev.sys]||'#555';
