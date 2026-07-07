@@ -864,18 +864,8 @@ body{font-family:'DM Sans',sans-serif;color:var(--ink);}
     </div>
   </div>
 
-  <!-- Modal login -->
-  <div class="login-modal-overlay" id="loginModal">
-    <div class="login-modal">
-      <div class="login-modal-title">La Ciudadela</div>
-      <div class="login-modal-sub">Ingresá para inscribirte a mesas y participar de la comunidad</div>
-      <button class="login-google-btn" onclick="window.AUTH.loginGoogle()">
-        <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M16.51 8H8.98v3h4.3c-.18 1-.74 1.48-1.6 2.04v2.01h2.6a7.8 7.8 0 002.38-5.88c0-.57-.05-.66-.15-1.18z"/><path fill="#34A853" d="M8.98 17c2.16 0 3.97-.72 5.3-1.94l-2.6-2a4.8 4.8 0 01-7.18-2.54H1.83v2.07A8 8 0 008.98 17z"/><path fill="#FBBC05" d="M4.5 10.52a4.8 4.8 0 010-3.04V5.41H1.83a8 8 0 000 7.18l2.67-2.07z"/><path fill="#EA4335" d="M8.98 4.18c1.17 0 2.23.4 3.06 1.2l2.3-2.3A8 8 0 001.83 5.4L4.5 7.49a4.77 4.77 0 014.48-3.3z"/></svg>
-        Ingresar con Google
-      </button>
-      <button class="login-modal-close" onclick="window.AUTH.closeLogin()">Cancelar</button>
-    </div>
-  </div>
+  <!-- Modal login: ver el modal completo con pestañas Google/Email al final del documento -->
+
   <div class="nav-bar">
     <button class="nav-arrow" id="prevBtn">&#8592;</button>
     <span class="nav-period" id="periodLabel"></span>
@@ -1019,7 +1009,8 @@ body{font-family:'DM Sans',sans-serif;color:var(--ink);}
   window.FB = {
     db, auth,
     doc, getDoc, setDoc, collection, getDocs, writeBatch, query, orderBy, limit, where, addDoc, serverTimestamp,
-    GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged
+    GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged,
+    createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, updateProfile
   };
   if (window._fbResolve) window._fbResolve();
 </script>
@@ -1135,6 +1126,86 @@ body{font-family:'DM Sans',sans-serif;color:var(--ink);}
     });
   }
 
+  // ── Auth por email/contraseña ──────────────────────────────────────────
+  function _showAuthError(msg, isOk) {
+    const el = $('authError');
+    if (!el) return;
+    el.textContent = msg;
+    el.style.background = isOk ? 'var(--green-light)' : 'var(--red-light)';
+    el.style.color = isOk ? 'var(--green)' : 'var(--red)';
+    el.classList.add('show');
+  }
+
+  function _validatePassword(pwd) {
+    if (pwd.length < 8) return 'La contraseña debe tener al menos 8 caracteres.';
+    if (!/[A-Z]/.test(pwd)) return 'Debe incluir al menos una mayúscula.';
+    if (!/[0-9]/.test(pwd)) return 'Debe incluir al menos un número.';
+    return null;
+  }
+
+  window._authTab = function(tab) {
+    document.querySelectorAll('.auth-tab').forEach((t,i)=>{ t.classList.toggle('active',(i===0)===(tab==='google')); });
+    $('authPanelGoogle')?.classList.toggle('active', tab==='google');
+    $('authPanelEmail')?.classList.toggle('active', tab==='email');
+    $('authError')?.classList.remove('show');
+  };
+
+  window._emailTab = function(tab) {
+    const isLogin = tab==='login';
+    if ($('formLogin'))    $('formLogin').style.display    = isLogin ? 'flex' : 'none';
+    if ($('formRegister')) $('formRegister').style.display = isLogin ? 'none' : 'flex';
+    if ($('btnTabLogin')) { $('btnTabLogin').style.background = isLogin?'var(--ink)':'var(--bg2)'; $('btnTabLogin').style.color = isLogin?'#fff':'var(--muted)'; }
+    if ($('btnTabRegister')) { $('btnTabRegister').style.background = isLogin?'var(--bg2)':'var(--ink)'; $('btnTabRegister').style.color = isLogin?'var(--muted)':'#fff'; }
+    $('authError')?.classList.remove('show');
+  };
+
+  window.doEmailLogin = async () => {
+    const email = $('loginEmail').value.trim();
+    const pwd   = $('loginPassword').value;
+    if (!email || !pwd) { _showAuthError('Completá todos los campos.'); return; }
+    const btn = document.querySelector('#formLogin .auth-submit');
+    if (btn) { btn.disabled = true; btn.textContent = 'Ingresando…'; }
+    const { auth, signInWithEmailAndPassword } = await getFB();
+    signInWithEmailAndPassword(auth, email, pwd)
+      .then(()=>{ window.AUTH.closeLogin(); })
+      .catch(e=>{
+        const msgs = {'auth/user-not-found':'No existe una cuenta con ese email.','auth/wrong-password':'Contraseña incorrecta.','auth/invalid-credential':'Email o contraseña incorrectos.','auth/too-many-requests':'Demasiados intentos.','auth/user-disabled':'Cuenta desactivada.'};
+        _showAuthError(msgs[e.code]||'Error al ingresar.');
+        if (btn) { btn.disabled = false; btn.textContent = 'Ingresar'; }
+      });
+  };
+
+  window.doRegister = async () => {
+    const name  = $('regName').value.trim();
+    const email = $('regEmail').value.trim();
+    const pwd   = $('regPassword').value;
+    const pwd2  = $('regPassword2').value;
+    if (!name||!email||!pwd||!pwd2) { _showAuthError('Completá todos los campos.'); return; }
+    if (pwd!==pwd2) { _showAuthError('Las contraseñas no coinciden.'); return; }
+    const err = _validatePassword(pwd);
+    if (err) { _showAuthError(err); return; }
+    const btn = document.querySelector('#formRegister .auth-submit');
+    if (btn) { btn.disabled = true; btn.textContent = 'Creando cuenta…'; }
+    const { auth, createUserWithEmailAndPassword, updateProfile } = await getFB();
+    createUserWithEmailAndPassword(auth, email, pwd)
+      .then(cred => updateProfile(cred.user, { displayName: name }))
+      .then(()=>{ window.AUTH.closeLogin(); })
+      .catch(e=>{
+        const msgs = {'auth/email-already-in-use':'Ya existe una cuenta con ese email.','auth/invalid-email':'Email no válido.','auth/weak-password':'Contraseña muy débil.'};
+        _showAuthError(msgs[e.code]||'Error al crear la cuenta.');
+        if (btn) { btn.disabled = false; btn.textContent = 'Crear cuenta'; }
+      });
+  };
+
+  window.doResetPassword = async () => {
+    const email = $('loginEmail').value.trim();
+    if (!email) { _showAuthError('Ingresá tu email primero.'); return; }
+    const { auth, sendPasswordResetEmail } = await getFB();
+    sendPasswordResetEmail(auth, email)
+      .then(()=>{ _showAuthError('✓ Te enviamos un email para restablecer la contraseña.', true); })
+      .catch(()=>{ _showAuthError('No encontramos una cuenta con ese email.'); });
+  };
+
   // ── API pública ──────────────────────────────────────────────────────────
   window.AUTH = {
     openLogin() {
@@ -1177,6 +1248,10 @@ body{font-family:'DM Sans',sans-serif;color:var(--ink);}
     isLoggedIn() { return !!currentUser; },
     hasRole(r)   { return currentProfile?.roles?.includes(r) || false; }
   };
+
+  window.loginGoogle = () => window.AUTH.loginGoogle();
+  window.closeLogin  = () => window.AUTH.closeLogin();
+  window.openLogin   = () => window.AUTH.openLogin();
 
   // Cerrar dropdown al hacer click afuera
   document.addEventListener('click', (e) => {
