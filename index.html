@@ -1007,11 +1007,10 @@ body{font-family:'DM Sans',sans-serif;color:var(--ink);}
            collection, getDocs, writeBatch, query, orderBy, limit, where, serverTimestamp }
     from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
   import { getAuth, GoogleAuthProvider, signInWithPopup,
-           signOut, onAuthStateChanged }
-    ;,
-         createUserWithEmailAndPassword, signInWithEmailAndPassword,
-         sendPasswordResetEmail, updateProfile }
-  from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js'
+           signOut, onAuthStateChanged,
+           createUserWithEmailAndPassword, signInWithEmailAndPassword,
+           sendPasswordResetEmail, updateProfile }
+  from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 
   const app  = initializeApp(CIUDADELA_CONFIG.FIREBASE);
   const db   = getFirestore(app);
